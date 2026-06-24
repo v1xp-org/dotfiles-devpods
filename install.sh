@@ -2,8 +2,6 @@
 
 set -euo pipefail
 
-DOTFILES_DIR="${DOTFILES_DIR:-/tmp/dotfiles}"
-
 task_install_stow() {
   echo "Installing stow..."
   sudo apt-get update -qq
@@ -11,8 +9,8 @@ task_install_stow() {
 }
 
 install_targets() {
-  echo "Using dotfiles from: $DOTFILES_DIR"
-  cd "${DOTFILES_DIR}/targets" || exit 1
+  echo "Using dotfiles from: $(pwd)"
+  cd "targets" || exit 1
 
   echo "DEBUG::: $(pwd)"
   for dir in */; do
