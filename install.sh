@@ -24,7 +24,7 @@ install_targets() {
   done
 }
 
-task_main() {
+task_stow() {
   echo "Checking for stow..."
   if ! command -v stow &>/dev/null; then
     task_install_stow
@@ -34,6 +34,20 @@ task_main() {
 
   install_targets
 
+}
+
+task_git() {
+  export SSH_AUTH_SOCK=~/.gnupg/socket
+
+  git config --global commit.gpgsign true
+  git config --global user.signingkey 3B54C1D66B135A28494341A812CC6254259BFE53
+  git config --global user.email "v1xp.ccox@proton.me"
+  git config --global user.name "v1XP.CCox"
+}
+
+task_main() {
+  task_stow &
+  task_git &
 }
 
 task_main
