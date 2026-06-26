@@ -39,12 +39,37 @@ task_stow() {
 }
 
 task_git() {
-  export SSH_AUTH_SOCK=~/.gnupg/socket
-
   git config --global commit.gpgsign true
   git config --global user.signingkey 3B54C1D66B135A28494341A812CC6254259BFE53
   git config --global user.email "v1xp.ccox@proton.me"
   git config --global user.name "v1XP.CCox"
+}
+
+task_ssh() {
+  # In devpod containers, keys live in /home/vscode/.ssh-host (bind-mounted from host)
+  # $HOME may be /home/victor due to host user, so check the hardcoded path too
+  local ssh_host=""
+  for p in /home/vscode/.ssh-host "$HOME/.ssh-host"; do
+    if [ -d "$p" ] && [ -f "$p/id_ed25519" ]; then ssh_host="$p"; break; fi
+  done
+
+  if [ -n "$ssh_host" ]; then
+    mkdir -p "$HOME/.ssh" && chmod 700 "$HOME/.ssh"
+    cp "$ssh_host"/id_* "$HOME/.ssh/" 2>/dev/null || true
+    cp "$ssh_host"/known_hosts "$HOME/.ssh/" 2>/dev/null || true
+    chmod 600 "$HOME"/.ssh/id_* 2>/dev/null || true
+    cat >"$HOME/.ssh/config" <<'SSHEOF'
+Host github.com
+  HostName github.com
+  User git
+  IdentityFile ~/.ssh/id_ed25519
+  IdentitiesOnly yes
+SSHEOF
+    chmod 600 "$HOME/.ssh/config"
+    echo "SSH keys copied from $ssh_host"
+  else
+    echo "No ssh-host mount found, skipping SSH setup"
+  fi
 }
 first_inits() {
   command -v nvim >/dev/null 2>&1 && nohup nvim --headless "+Lazy! sync" +TSUpdateSync +qa >$logfile 2>&1
@@ -53,6 +78,7 @@ first_inits() {
 task_main() {
   task_stow &
   task_git &
+  task_ssh &
   wait
   first_inits
 }
