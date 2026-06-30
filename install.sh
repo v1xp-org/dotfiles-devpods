@@ -92,6 +92,7 @@ task_gpg() {
 }
 
 first_inits() {
+  sudo ln -sf /usr/share/zoneinfo/America/Campo_Grande /etc/localtime
   command -v nvim >/dev/null 2>&1 && nohup nvim --headless "+Lazy! sync" +TSUpdateSync +qa >$logfile 2>&1
 }
 
