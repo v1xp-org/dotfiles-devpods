@@ -1,8 +1,5 @@
 {
   "image": "ghcr.io/v1xp/devpod-cli-uv:latest",
-  "mounts": [
-    "source=${localEnv:HOME}/.gnupg,target=/home/vscode/.gnupg,type=bind,consistency=cached"
-  ],
-  "postCreateCommand": "uv --version",
+  "postCreateCommand": "nvim --version && uv --version && opencode --version && lazygit --version",
   "remoteUser": "vscode"
 }
