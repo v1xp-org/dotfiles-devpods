@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+
+# graphify-project: Initialize graphify knowledge graph + git hooks for any project
+# Usage: graphify-project [--force]
+
+set -euo pipefail
+
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+YELLOW='\033[0;33m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+NC='\033[0m'
+
+force=false
+if [[ "${1:-}" == "--force" ]]; then
+  force=true
+fi
+
+# Check if graphify is installed
+if ! command -v graphify &>/dev/null; then
+  echo -e "${RED}Error:${NC} graphify not installed"
+  echo "Install with: uv tool install graphifyy"
+  exit 1
+fi
+
+# Check if we're in a git repo
+if ! git rev-parse --is-inside-work-tree &>/dev/null; then
+  echo -e "${RED}Error:${NC} Not inside a git repository"
+  echo "Run 'git init' first, or use 'project-init' to create a new project"
+  exit 1
+fi
+
+# Check if graph already exists
+if [ -d "graphify-out" ] && [ -f "graphify-out/graph.json" ]; then
+  if $force; then
+    echo -e "${YELLOW}Rebuilding existing graph...${NC}"
+    rm -rf graphify-out
+  else
+    echo -e "${GREEN}Graph already exists${NC} at graphify-out/"
+    echo "Use --force to rebuild"
+    # Still install hooks if not present
+    if [ ! -f ".git/hooks/post-commit" ] || ! grep -q "graphify" ".git/hooks/post-commit" 2>/dev/null; then
+      echo "Installing git hooks..."
+      graphify hook install
+      echo -e "${GREEN}✓${NC} Git hooks installed"
+    else
+      echo -e "${GREEN}✓${NC} Git hooks already installed"
+    fi
+    exit 0
+  fi
+fi
+
+# Build the graph
+echo -e "${CYAN}Building knowledge graph...${NC}"
+graphify .
+
+# Install git hooks
+echo ""
+echo -e "${CYAN}Installing git hooks...${NC}"
+graphify hook install
+
+# Summary
+echo ""
+echo -e "${BOLD}${GREEN}Done!${NC}"
+echo -e "  Graph: ${CYAN}graphify-out/${NC}"
+echo -e "  Report: ${CYAN}graphify-out/GRAPH_REPORT.md${NC}"
+echo -e "  Hooks: ${CYAN}post-commit, post-checkout${NC}"
+echo ""
+echo -e "Query the graph with:"
+echo -e "  ${CYAN}graphify query \"show the architecture\" --graph graphify-out/graph.json${NC}"

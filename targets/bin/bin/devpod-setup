@@ -1,0 +1,105 @@
+#!/usr/bin/env bash
+
+# devpod-setup: One-time devpod setup after 'devpod up'
+# Runs all install.sh tasks, installs tmux TPM, initializes graphify
+
+set -euo pipefail
+
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+YELLOW='\033[0;33m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+NC='\033[0m'
+
+echo -e "${BOLD}${CYAN}DevPod Setup${NC}"
+echo ""
+
+# Find dotfiles directory
+DOTFILES_DIR="${LOCAL_SHARE_DOTFILES:-$HOME/.local/share/dotfiles}"
+if [ ! -d "$DOTFILES_DIR" ]; then
+  # Try to find it relative to script location
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  # scripts are in ~/bin, dotfiles repo is parent of targets/bin/bin
+  CANDIDATE="$(cd "$SCRIPT_DIR/../.." && pwd)"
+  if [ -f "$CANDIDATE/install.sh" ]; then
+    DOTFILES_DIR="$CANDIDATE"
+  fi
+fi
+
+# Task 1: Run install.sh
+echo -e "${BOLD}Running dotfiles install...${NC}"
+if [ -f "$DOTFILES_DIR/install.sh" ]; then
+  if bash "$DOTFILES_DIR/install.sh"; then
+    echo -e "${GREEN}✓${NC} Dotfiles installed"
+  else
+    echo -e "${YELLOW}~${NC} Dotfiles install had warnings (check ~/.dotfiles.log)"
+  fi
+else
+  echo -e "${RED}✗${NC} install.sh not found at $DOTFILES_DIR"
+  echo "Set LOCAL_SHARE_DOTFILES or run from the dotfiles directory"
+fi
+
+# Task 2: Install tmux TPM
+echo ""
+echo -e "${BOLD}Checking tmux TPM...${NC}"
+if [ ! -d "$HOME/.tmux/plugins/tpm" ]; then
+  echo "Installing TPM..."
+  if git clone https://github.com/tmux-plugins/tpm "$HOME/.tmux/plugins/tpm" 2>/dev/null; then
+    echo -e "${GREEN}✓${NC} TPM installed"
+    # Install plugins
+    echo "Installing tmux plugins..."
+    "$HOME/.tmux/plugins/tpm/bin/install_plugins" 2>/dev/null || true
+  else
+    echo -e "${YELLOW}~${NC} TPM install failed (tmux may not be installed)"
+  fi
+else
+  echo -e "${GREEN}✓${NC} TPM already installed"
+fi
+
+# Task 3: Initialize graphify for current project
+echo ""
+echo -e "${BOLD}Checking graphify...${NC}"
+if git rev-parse --is-inside-work-tree &>/dev/null; then
+  if ! command -v graphify &>/dev/null; then
+    echo -e "${YELLOW}~${NC} graphify not installed, skipping project graph"
+    echo "Install with: uv tool install graphifyy"
+  elif [ -d "graphify-out" ] && [ -f "graphify-out/graph.json" ]; then
+    echo -e "${GREEN}✓${NC} Graph already exists"
+    # Ensure hooks are installed
+    if [ ! -f ".git/hooks/post-commit" ] || ! grep -q "graphify" ".git/hooks/post-commit" 2>/dev/null; then
+      graphify hook install 2>/dev/null && echo -e "${GREEN}✓${NC} Git hooks installed" || true
+    fi
+  else
+    echo "Building knowledge graph for current project..."
+    if graphify . 2>/dev/null; then
+      echo -e "${GREEN}✓${NC} Graph built"
+      graphify hook install 2>/dev/null && echo -e "${GREEN}✓${NC} Git hooks installed"
+    else
+      echo -e "${YELLOW}~${NC} Graph build failed (non-critical)"
+    fi
+  fi
+else
+  echo -e "${YELLOW}~${NC} Not in a git repo, skipping graph init"
+  echo "Use 'graphify-project' in any project directory"
+fi
+
+# Task 4: Ensure ~/bin is in PATH
+echo ""
+echo -e "${BOLD}Checking PATH...${NC}"
+if [[ ":$PATH:" != *":$HOME/bin:"* ]]; then
+  echo -e "${YELLOW}~${NC} ~/bin not in PATH"
+  echo "Add to your shell profile:"
+  echo "  export PATH=\"\$HOME/bin:\$PATH\""
+else
+  echo -e "${GREEN}✓${NC} ~/bin in PATH"
+fi
+
+# Summary
+echo ""
+echo -e "${BOLD}${GREEN}Setup complete!${NC}"
+echo ""
+echo "Available commands:"
+echo -e "  ${CYAN}devpod-status${NC}      - Check environment health"
+echo -e "  ${CYAN}graphify-project${NC}   - Init graphify for any project"
+echo -e "  ${CYAN}project-init${NC}       - Scaffold a new project"
