@@ -19,7 +19,7 @@ install_targets() {
   for target_dir in "$targets_dir"/*/; do
     local cmd
     cmd="$(basename "$target_dir")"
-    if ! command -v "$cmd" &>/dev/null; then
+    if [[ "$cmd" != "bin" ]] && ! command -v "$cmd" &>/dev/null; then
       echo "Skipping $cmd as it is not a command."
       continue
     fi
@@ -124,6 +124,26 @@ task_gpg() {
   fi
 }
 
+task_opencode_plugins() {
+  # Install graphify (knowledge graph for codebases)
+  if command -v uv &>/dev/null; then
+    if ! uv tool list 2>/dev/null | grep -q graphifyy; then
+      echo "Installing graphify..."
+      uv tool install graphifyy 2>/dev/null || echo "WARNING: graphify install failed"
+    fi
+  elif command -v pip &>/dev/null; then
+    if ! pip show graphifyy &>/dev/null; then
+      echo "Installing graphify via pip..."
+      pip install graphifyy 2>/dev/null || echo "WARNING: graphify install failed"
+    fi
+  fi
+
+  # Install opencode-ralph-loop plugin
+  if command -v opencode &>/dev/null; then
+    echo "ralph-loop plugin will be auto-installed by opencode on first run"
+  fi
+}
+
 first_inits() {
   sudo ln -sf /usr/share/zoneinfo/America/Campo_Grande /etc/localtime
 }
@@ -136,6 +156,7 @@ task_main() {
   task_git &   pids+=($!)
   task_ssh &   pids+=($!)
   task_gpg &   pids+=($!)
+  task_opencode_plugins & pids+=($!)
 
   for pid in "${pids[@]}"; do
     if ! wait "$pid"; then
