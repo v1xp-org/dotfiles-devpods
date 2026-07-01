@@ -22,11 +22,11 @@ check() {
   shift
   if "$@" &>/dev/null; then
     echo -e "  ${GREEN}✓${NC} $label"
-    ((pass++))
+    pass=$((pass + 1))
     return 0
   else
     echo -e "  ${RED}✗${NC} $label"
-    ((fail++))
+    fail=$((fail + 1))
     return 1
   fi
 }
@@ -36,10 +36,10 @@ warn_check() {
   shift
   if "$@" &>/dev/null; then
     echo -e "  ${GREEN}✓${NC} $label"
-    ((pass++))
+    pass=$((pass + 1))
   else
     echo -e "  ${YELLOW}~${NC} $label"
-    ((warn++))
+    warn=$((warn + 1))
   fi
 }
 
@@ -57,13 +57,13 @@ for p in /home/vscode/.ssh-host "$HOME/.ssh-host" "$HOME/.ssh"; do
 done
 if $ssh_ok; then
   echo -e "  ${GREEN}✓${NC} SSH keys found"
-  ((pass++))
+  pass=$((pass + 1))
 elif [ -n "${SSH_AUTH_SOCK:-}" ]; then
   echo -e "  ${GREEN}✓${NC} SSH agent forwarding active"
-  ((pass++))
+  pass=$((pass + 1))
 else
   echo -e "  ${RED}✗${NC} No SSH keys or agent found"
-  ((fail++))
+  fail=$((fail + 1))
 fi
 
 # GPG
@@ -78,10 +78,10 @@ for p in /home/vscode/.gnupg "$HOME/.gnupg"; do
 done
 if $gpg_ok; then
   echo -e "  ${GREEN}✓${NC} GPG keys found"
-  ((pass++))
+  pass=$((pass + 1))
 else
   echo -e "  ${YELLOW}~${NC} No GPG keys found"
-  ((warn++))
+  warn=$((warn + 1))
 fi
 
 # Git
@@ -90,17 +90,17 @@ echo -e "${BOLD}Git${NC}"
 check "git installed" command -v git
 if git config --global user.name &>/dev/null; then
   echo -e "  ${GREEN}✓${NC} user.name set: $(git config --global user.name)"
-  ((pass++))
+  pass=$((pass + 1))
 else
   echo -e "  ${RED}✗${NC} user.name not set"
-  ((fail++))
+  fail=$((fail + 1))
 fi
 if git config --global user.email &>/dev/null; then
   echo -e "  ${GREEN}✓${NC} user.email set: $(git config --global user.email)"
-  ((pass++))
+  pass=$((pass + 1))
 else
   echo -e "  ${RED}✗${NC} user.email not set"
-  ((fail++))
+  fail=$((fail + 1))
 fi
 
 # Nvim
@@ -109,10 +109,10 @@ echo -e "${BOLD}Nvim${NC}"
 if command -v nvim &>/dev/null; then
   nvim_version=$(nvim --version | head -1)
   echo -e "  ${GREEN}✓${NC} $nvim_version"
-  ((pass++))
+  pass=$((pass + 1))
 else
   echo -e "  ${RED}✗${NC} nvim not installed"
-  ((fail++))
+  fail=$((fail + 1))
 fi
 
 # Tmux
@@ -121,17 +121,17 @@ echo -e "${BOLD}Tmux${NC}"
 if command -v tmux &>/dev/null; then
   tmux_version=$(tmux -V)
   echo -e "  ${GREEN}✓${NC} $tmux_version"
-  ((pass++))
+  pass=$((pass + 1))
 else
   echo -e "  ${RED}✗${NC} tmux not installed"
-  ((fail++))
+  fail=$((fail + 1))
 fi
 if [ -d "$HOME/.tmux/plugins/tpm" ]; then
   echo -e "  ${GREEN}✓${NC} TPM installed"
-  ((pass++))
+  pass=$((pass + 1))
 else
   echo -e "  ${YELLOW}~${NC} TPM not installed (run devpod-setup)"
-  ((warn++))
+  warn=$((warn + 1))
 fi
 
 # OpenCode
@@ -139,20 +139,20 @@ echo ""
 echo -e "${BOLD}OpenCode${NC}"
 if command -v opencode &>/dev/null; then
   echo -e "  ${GREEN}✓${NC} opencode installed"
-  ((pass++))
+  pass=$((pass + 1))
 else
   echo -e "  ${RED}✗${NC} opencode not installed"
-  ((fail++))
+  fail=$((fail + 1))
 fi
 if command -v uv &>/dev/null && uv tool list 2>/dev/null | grep -q graphifyy; then
   echo -e "  ${GREEN}✓${NC} graphify installed (uv tool)"
-  ((pass++))
+  pass=$((pass + 1))
 elif command -v graphify &>/dev/null; then
   echo -e "  ${GREEN}✓${NC} graphify installed"
-  ((pass++))
+  pass=$((pass + 1))
 else
   echo -e "  ${YELLOW}~${NC} graphify not installed"
-  ((warn++))
+  warn=$((warn + 1))
 fi
 
 # Docker
@@ -160,13 +160,13 @@ echo ""
 echo -e "${BOLD}Docker${NC}"
 if [ -S /var/run/docker.sock ]; then
   echo -e "  ${GREEN}✓${NC} Docker socket accessible"
-  ((pass++))
+  pass=$((pass + 1))
 elif [ -S /run/host-desktop/docker.sock ]; then
   echo -e "  ${GREEN}✓${NC} Docker socket accessible (host)"
-  ((pass++))
+  pass=$((pass + 1))
 else
   echo -e "  ${RED}✗${NC} Docker socket not found"
-  ((fail++))
+  fail=$((fail + 1))
 fi
 
 # Summary
