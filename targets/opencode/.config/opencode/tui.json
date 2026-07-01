@@ -1,0 +1,6 @@
+{
+  "$schema": "https://opencode.ai/tui.json",
+  "theme": "dark",
+  "show_token_usage": true,
+  "show_thoughts": true
+}
