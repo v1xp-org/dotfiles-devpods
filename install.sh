@@ -142,6 +142,7 @@ task_opencode_plugins() {
   if command -v graphify &>/dev/null; then
     echo "Installing graphify skill for opencode..."
     graphify install opencode 2>/dev/null || echo "WARNING: graphify skill install failed"
+    graphify opencode install 2>/dev/null || echo "WARNING: graphify opencode install failed"
   fi
 
   # Install opencode-ralph-loop plugin
