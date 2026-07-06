@@ -4,6 +4,9 @@ set -euo pipefail
 
 logfile=~/.dotfiles.log
 
+# Source devpod env if available (GPG, SSH, API keys, git identity)
+[ -f ~/.devpod-env.sh ] && source ~/.devpod-env.sh
+
 install_targets() {
   local dotfiles_dir
   dotfiles_dir="$(cd "$(dirname "$0")" && pwd)"
