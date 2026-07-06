@@ -5,7 +5,9 @@ set -euo pipefail
 logfile=~/.dotfiles.log
 
 # Source devpod env if available (GPG, SSH, API keys, git identity)
-[ -f ~/.devpod-env.sh ] && source ~/.devpod-env.sh
+if [ -f ~/.devpod-env.sh ]; then
+  source ~/.devpod-env.sh
+fi
 
 install_targets() {
   local dotfiles_dir
@@ -52,13 +54,12 @@ task_stow() {
 task_git() {
   git config --global commit.gpgsign true
 
-  # Dynamic signing key detection
-  # First try to find a signing subkey
-  SIGNING_KEY=$(gpg --list-secret-subkeys --keyid-format long 2>/dev/null | grep "^\s*ssb" | head -1 | awk '{print $2}' | cut -d'/' -f2)
+  # Dynamic signing key detection (may fail if GPG agent isn't ready)
+  SIGNING_KEY=$(gpg --list-secret-subkeys --keyid-format long 2>/dev/null | grep "^\s*ssb" | head -1 | awk '{print $2}' | cut -d'/' -f2 || true)
 
   # If no subkey found, try primary key
   if [ -z "$SIGNING_KEY" ]; then
-    SIGNING_KEY=$(gpg --list-secret-keys --keyid-format long 2>/dev/null | grep "^sec" | head -1 | awk '{print $2}' | cut -d'/' -f2)
+    SIGNING_KEY=$(gpg --list-secret-keys --keyid-format long 2>/dev/null | grep "^sec" | head -1 | awk '{print $2}' | cut -d'/' -f2 || true)
   fi
 
   if [ -n "$SIGNING_KEY" ]; then
