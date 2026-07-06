@@ -105,6 +105,7 @@ SSHEOF
     echo "SSH keys copied from $ssh_host (using $key_name)"
   elif [ -n "${SSH_AUTH_SOCK:-}" ]; then
     echo "Using SSH agent forwarding (SSH_AUTH_SOCK=$SSH_AUTH_SOCK)"
+    mkdir -p "$HOME/.ssh" && chmod 700 "$HOME/.ssh"
     cat >"$HOME/.ssh/config" <<SSHEOF
 Host github.com
   HostName github.com
