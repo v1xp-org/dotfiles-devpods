@@ -48,7 +48,20 @@ task_stow() {
 
 task_git() {
   git config --global commit.gpgsign true
-  git config --global user.signingkey 3B54C1D66B135A28494341A812CC6254259BFE53
+
+  # Dynamic signing key detection
+  # First try to find a signing subkey
+  SIGNING_KEY=$(gpg --list-secret-subkeys --keyid-format long 2>/dev/null | grep "^\s*ssb" | head -1 | awk '{print $2}' | cut -d'/' -f2)
+
+  # If no subkey found, try primary key
+  if [ -z "$SIGNING_KEY" ]; then
+    SIGNING_KEY=$(gpg --list-secret-keys --keyid-format long 2>/dev/null | grep "^sec" | head -1 | awk '{print $2}' | cut -d'/' -f2)
+  fi
+
+  if [ -n "$SIGNING_KEY" ]; then
+    git config --global user.signingkey "$SIGNING_KEY"
+  fi
+
   git config --global user.email "v1xp.ccox@proton.me"
   git config --global user.name "v1XP.CCox"
 }
