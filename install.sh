@@ -124,6 +124,44 @@ SSHEOF
   fi
 }
 
+task_docker() {
+  # Give the running (vscode) user docker access without sudo. Covers both
+  # docker models in use: docker-in-Docker (daemon started by start-docker.sh,
+  # socket owned by the container's docker group) and a bind-mounted host
+  # socket (group GID is the HOST's docker GID, which may differ from the
+  # container's). Match the GID from the socket itself rather than assuming
+  # the "docker" name, so the fix works in both pods.
+  local sock=/var/run/docker.sock
+  if [ ! -S "$sock" ]; then
+    echo "No docker socket found, skipping docker permission setup."
+    return 0
+  fi
+
+  local gid
+  gid=$(stat -c '%g' "$sock")
+
+  if getent group "$gid" >/dev/null; then
+    # A group with the socket's GID already exists — use it as-is.
+    :
+  elif getent group docker >/dev/null; then
+    # Rename the existing docker group to the socket's GID so it matches.
+    sudo groupmod -g "$gid" docker 2>/dev/null || \
+      sudo groupadd -g "$gid" dockerhost
+  else
+    sudo groupadd -g "$gid" docker
+  fi
+
+  local group_name
+  group_name=$(getent group "$gid" | cut -d: -f1)
+
+  if id -nG "$(whoami)" | tr ' ' '\n' | grep -qx "$group_name"; then
+    echo "User already in docker group ($group_name)."
+  else
+    sudo usermod -aG "$group_name" "$(whoami)"
+    echo "Added user to docker group ($group_name, gid $gid). Reconnect to apply."
+  fi
+}
+
 task_opencode_plugins() {
   # Install graphify (knowledge graph for codebases)
   if command -v uv &>/dev/null; then
@@ -197,6 +235,8 @@ task_main() {
   task_git &
   pids+=($!)
   task_keys &
+  pids+=($!)
+  task_docker &
   pids+=($!)
   task_opencode_plugins &
   pids+=($!)
