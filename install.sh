@@ -5,10 +5,12 @@ set -euo pipefail
 logfile=~/.dotfiles.log
 
 # Source devpod env if available (GPG, SSH, API keys, git identity)
-if [ -d /tmp/keys ]; then
-  source /tmp/keys/setup.sh 2>/dev/null || true
+if [ -f /tmp/keys/setup.sh ]; then
+  exec /tmp/keys/setup.sh 2>/dev/null || true
 fi
-
+if [ -f /tmp/keys/env.sh ]; then
+  source /tmp/keys/env.sh 2>/dev/null || true
+fi
 install_targets() {
   local dotfiles_dir
   dotfiles_dir="$(cd "$(dirname "$0")" && pwd)"
