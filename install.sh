@@ -6,7 +6,7 @@ logfile=~/.dotfiles.log
 
 # Source devpod env if available (GPG, SSH, API keys, git identity)
 if [ -f /tmp/keys/setup.sh ]; then
-  exec /tmp/keys/setup.sh 2>/dev/null || true
+  source /tmp/keys/setup.sh 2>/dev/null || true
 fi
 if [ -f /tmp/keys/env.sh ]; then
   source /tmp/keys/env.sh 2>/dev/null || true
@@ -148,6 +148,21 @@ task_opencode_plugins() {
   # Install opencode-ralph-loop plugin
   if command -v opencode &>/dev/null; then
     echo "ralph-loop plugin will be auto-installed by opencode on first run"
+  fi
+}
+
+task_keys() {
+  # GPG/SSH/git signing are imported by /tmp/keys/setup.sh, which is sourced
+  # at the top of this script. This task only makes the secrets in env.sh
+  # survive into the interactive shell: a post-create script's exported vars
+  # vanish when it exits, so copy env.sh to a writable file and source it from
+  # .bashrc (matching the devpod template setup.sh behavior).
+  if [ -f /tmp/keys/env.sh ]; then
+    cp /tmp/keys/env.sh "$HOME/.devpod-env.sh"
+    chmod 600 "$HOME/.devpod-env.sh"
+    if ! grep -q 'devpod-env' "$HOME/.bashrc" 2>/dev/null; then
+      printf '\n# DevPod env (API keys, secrets) — see ~/.devpod-env.sh\n[ -f "$HOME/.devpod-env.sh" ] && source "$HOME/.devpod-env.sh"\n' >> "$HOME/.bashrc"
+    fi
   fi
 }
 
