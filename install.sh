@@ -5,8 +5,9 @@ set -euo pipefail
 logfile=~/.dotfiles.log
 
 # Source devpod env if available (GPG, SSH, API keys, git identity)
-if [ -f ~/.devpod-env.sh ]; then
-  source ~/.devpod-env.sh
+if [ -f /tmp/keys ]; then
+  cat /tmp/keys >>~/.bashrc 2>&1
+  cat /tmp/keys >>~/.zshrc 2>&1
 fi
 
 install_targets() {
@@ -176,18 +177,40 @@ task_opencode_plugins() {
 
 first_inits() {
   sudo ln -sf /usr/share/zoneinfo/America/Campo_Grande /etc/localtime
-  nvim --headless +"set spelllang=en_us,pt_br" +qa 2>/dev/null || true
+
+  # Pre-fetch the Portuguese spell file so Neovim never prompts
+  # "No spell file found for pt (utf-8). Download? [y/N]" on first run.
+  # spelllang=pt_br (see nvim options.lua) needs the base pt.utf-8.spl,
+  # which Neovim does not bundle. This dir is outside the stow-managed
+  # tree, so it persists across container restarts.
+  local spell_dir="$HOME/.config/nvim/spell"
+  mkdir -p "$spell_dir"
+  if [ ! -f "$spell_dir/pt.utf-8.spl" ]; then
+    curl -fsSL "https://ftp.nluug.nl/pub/vim/runtime/spell/pt.utf-8.spl" \
+      -o "$spell_dir/pt.utf-8.spl" 2>/dev/null || true
+  fi
+
+  # Pre-install Neovim plugins headlessly so the first launch is fast.
+  # Run detached with output to a log file so `devpod up` stays clean and
+  # finishes quickly (the old command only suppressed stderr, so the
+  # plugin-sync output on stdout still flooded the terminal).
+  nohup nvim --headless +"set spelllang=en_us,pt_br" +qa >/tmp/nvim-init.log 2>&1 &
 }
 
 task_main() {
   local pids=()
   local errors=0
 
-  task_stow &  pids+=($!)
-  task_git &   pids+=($!)
-  task_ssh &   pids+=($!)
-  task_gpg &   pids+=($!)
-  task_opencode_plugins & pids+=($!)
+  task_stow &
+  pids+=($!)
+  task_git &
+  pids+=($!)
+  task_ssh &
+  pids+=($!)
+  task_gpg &
+  pids+=($!)
+  task_opencode_plugins &
+  pids+=($!)
 
   for pid in "${pids[@]}"; do
     if ! wait "$pid"; then
