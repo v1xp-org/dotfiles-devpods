@@ -5,9 +5,8 @@ set -euo pipefail
 logfile=~/.dotfiles.log
 
 # Source devpod env if available (GPG, SSH, API keys, git identity)
-if [ -f /tmp/keys ]; then
-  cat /tmp/keys >>~/.bashrc 2>&1
-  cat /tmp/keys >>~/.zshrc 2>&1
+if [ -d /tmp/keys ]; then
+  source /tmp/keys/setup.sh 2>/dev/null || true
 fi
 
 install_targets() {
@@ -122,31 +121,6 @@ SSHEOF
     echo "No SSH keys found. Configure SSH agent forwarding or mount .ssh-host."
   fi
 }
-task_gpg() {
-  local gnupg_dir=""
-  for p in /home/vscode/.gnupg "$HOME/.gnupg"; do
-    if [ -d "$p" ] && [ -d "$p/private-keys-v1.d" ]; then
-      gnupg_dir="$p"
-      break
-    fi
-  done
-
-  if [ -n "$gnupg_dir" ]; then
-    if ! grep -q "^default-key" "$gnupg_dir/gpg.conf" 2>/dev/null; then
-      echo "default-key 3B54C1D66B135A28494341A812CC6254259BFE53" >>"$gnupg_dir/gpg.conf"
-      echo "GPG default key set in $gnupg_dir/gpg.conf"
-    fi
-    if ! grep -q "^pinentry-mode" "$gnupg_dir/gpg.conf" 2>/dev/null; then
-      echo "pinentry-mode loopback" >>"$gnupg_dir/gpg.conf"
-      echo "GPG pinentry-mode set to loopback"
-    fi
-    if ! grep -q "allow-loopback-pinentry" "$gnupg_dir/gpg-agent.conf" 2>/dev/null; then
-      echo "allow-loopback-pinentry" >>"$gnupg_dir/gpg-agent.conf"
-      echo "GPG agent configured for loopback pinentry"
-    fi
-    gpg-connect-agent reloadagent /bye 2>/dev/null || true
-  fi
-}
 
 task_opencode_plugins() {
   # Install graphify (knowledge graph for codebases)
@@ -205,9 +179,7 @@ task_main() {
   pids+=($!)
   task_git &
   pids+=($!)
-  task_ssh &
-  pids+=($!)
-  task_gpg &
+  task_keys &
   pids+=($!)
   task_opencode_plugins &
   pids+=($!)
